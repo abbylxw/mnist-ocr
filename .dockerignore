@@ -1,0 +1,15 @@
+.git/
+.venv/
+node_modules/
+**/__pycache__/
+**/*.py[cod]
+.ruff_cache/
+.pyrefly_cache/
+**/.DS_Store
+.env
+.env.*
+data/
+notebooks/
+results/
+tests/
+.vscode/

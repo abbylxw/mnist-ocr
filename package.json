@@ -1,0 +1,10 @@
+{
+  "name": "mnist-development-tools",
+  "private": true,
+  "scripts": {
+    "devcontainer": "devcontainer"
+  },
+  "devDependencies": {
+    "@devcontainers/cli": "0.89.0"
+  }
+}

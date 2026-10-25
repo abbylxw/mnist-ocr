@@ -1,0 +1,20 @@
+.venv/
+node_modules/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pyrefly_cache/
+.DS_Store
+.ipynb_checkpoints/
+.claude/settings.local.json
+
+# Generated data: MNIST downloads and exported evaluation images.
+# Exported JPEGs are verified against manifests/test_jpeg.sha256.
+data/
+
+# Keep only the evaluation report cited in the README.
+results/*
+!results/20261019T042353529283Z/
+
+# Scratch weights; the committed artifact is models/checkpoint.pt.
+*.pth

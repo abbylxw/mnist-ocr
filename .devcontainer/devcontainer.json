@@ -1,0 +1,24 @@
+{
+  "name": "MNIST Python development",
+  "build": { "dockerfile": "Dockerfile" },
+  "remoteUser": "vscode",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/mnist-ocr,type=bind",
+  "workspaceFolder": "/workspaces/mnist-ocr",
+  "mounts": [
+    "source=mnist-ocr-venv,target=/workspaces/mnist-ocr/.venv,type=volume"
+  ],
+  "postCreateCommand": "sudo chown vscode:vscode .venv && uv sync --locked --group notebooks",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "charliermarsh.ruff",
+        "meta.pyrefly"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/mnist-ocr/.venv/bin/python"
+      }
+    }
+  }
+}

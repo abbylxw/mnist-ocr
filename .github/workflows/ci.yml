@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR supersedes the running check.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Same uv as local development: the version pinned in uv.lock.
+      - uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa # v10.3.1
+        with:
+          version-file: uv.lock
+
+      # Runtime and dev groups only; notebooks are not checked in CI.
+      - run: uv sync --locked
+
+      - name: Tests
+        run: uv run --locked python -m unittest discover -s tests -v
+      - name: Lint
+        run: uv run --locked ruff check src tests
+      - name: Format
+        run: uv run --locked ruff format --check src tests
+      - name: Type check
+        run: uv run --locked pyrefly check
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build image
+        run: docker build -t mnist-ocr .
+
+      # Same offline, read-only check as the README example.
+      - name: Predict example image
+        run: |
+          output=$(docker run --rm --network none \
+            --mount "type=bind,source=$PWD/tests/test_images,target=/inputs,readonly" \
+            mnist-ocr /inputs/1_label_2.png --label 2)
+          echo "$output"
+          grep -qx "Predicted digit: 2" <<< "$output"

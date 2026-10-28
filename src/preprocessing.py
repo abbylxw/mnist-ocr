@@ -4,11 +4,13 @@ from torch.utils.data import random_split
 from torchvision.transforms import v2
 from torchvision.transforms.functional import normalize
 
+PADDING_PER_SIDE = 2
+
 _padding_transform = v2.Compose(
     [
         v2.ToImage(),
         v2.ToDtype(torch.float32, scale=False),
-        nn.ConstantPad2d(2, 0),
+        nn.ConstantPad2d(PADDING_PER_SIDE, 0),
     ]
 )
 

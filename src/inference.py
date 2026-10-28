@@ -11,7 +11,26 @@ class MnistInference:
         self.loaded_checkpoint = torch.load(
             self.checkpoint_path, map_location=self.device, weights_only=True
         )
-        self.saved_preprocessing = self.loaded_checkpoint["preprocessing"]
+        architecture = self.loaded_checkpoint.get("architecture")
+        if architecture != nn_model.ARCHITECTURE:
+            raise ValueError(
+                f"Expected architecture {nn_model.ARCHITECTURE!r}, "
+                f"received {architecture!r}."
+            )
+
+        saved_preprocessing = self.loaded_checkpoint.get("preprocessing")
+        if not isinstance(saved_preprocessing, dict):
+            raise ValueError(
+                "Expected preprocessing metadata containing padding_per_side."
+            )
+        padding = saved_preprocessing.get("padding_per_side")
+        if padding != preprocessing.PADDING_PER_SIDE:
+            raise ValueError(
+                f"Expected padding_per_side {preprocessing.PADDING_PER_SIDE!r}, "
+                f"received {padding!r}."
+            )
+
+        self.saved_preprocessing = saved_preprocessing
         self.loaded_model = nn_model.NeuralNetwork().to(self.device)
         self.loaded_model.load_state_dict(self.loaded_checkpoint["model_state_dict"])
         self.loaded_model.eval()

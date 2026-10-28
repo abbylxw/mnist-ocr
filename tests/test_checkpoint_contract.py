@@ -51,7 +51,10 @@ class CheckpointContractTests(unittest.TestCase):
 
     @unittest.skipUnless(BUNDLED_CHECKPOINT.is_file(), "trained checkpoint absent")
     def test_bundled_checkpoint_satisfies_contract(self):
-        checkpoint = torch.load(BUNDLED_CHECKPOINT, weights_only=True)
+        # The checkpoint was saved from MPS; map to CPU so it loads on any host.
+        checkpoint = torch.load(
+            BUNDLED_CHECKPOINT, map_location="cpu", weights_only=True
+        )
         self.assertEqual(checkpoint["architecture"], ARCHITECTURE)
         self.assertEqual(
             checkpoint["preprocessing"]["padding_per_side"], PADDING_PER_SIDE

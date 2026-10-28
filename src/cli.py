@@ -81,7 +81,7 @@ def parse_args_and_predict():
             checkpoint_path=checkpoint_path,
             device="cpu",
         )
-    except FileNotFoundError as error:
+    except (FileNotFoundError, ValueError) as error:
         report_checkpoint_error(f"Could not load checkpoint {checkpoint_path}: {error}")
         sys.exit(1)
 

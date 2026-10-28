@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+ARCHITECTURE = "lenet5_relu_maxpool_dense_v1"
+
 
 class NeuralNetwork(nn.Module):
     def __init__(self):

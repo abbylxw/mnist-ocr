@@ -1,8 +1,10 @@
 # MNIST project: progress and remaining work
 
-Updated: 2026-10-24. Goal: experience the full cycle once (model development,
-evaluation, inference/deployment, version control). Only necessary items are
-listed; nice-to-haves were deliberately left out.
+Updated: 2026-10-27. Goal: take the project through the full cycle (model
+development, evaluation, inference/deployment, version control) to a
+production-level standard. Only items a production model requires are listed:
+a versioned, reproducible, traceable artifact; checks that block bad changes;
+and honest documentation of what the model can and cannot do.
 
 ## Decisions recorded
 
@@ -18,47 +20,47 @@ listed; nice-to-haves were deliberately left out.
   - The new checkpoint replaces `models/checkpoint.pt`; README hashes and
     results must be regenerated.
 - **Dropped:** training resumption (training takes ~20 s); a separate
-  stratified-split task (MNIST is near-balanced; one sentence in the decision
-  log covers it).
+  stratified-split task (MNIST is near-balanced).
+- **Dropped as not required for production (2026-10-27):** loss-curve plots
+  (per-epoch numbers are recorded instead), the misclassified-image grid,
+  seed-variance study, a separate regeneration doc (the training and
+  evaluation commands are the instructions), and branch protection (needs a
+  paid plan for private repos; merge only on green CI by habit instead).
+- **Interface stays a one-shot CLI in Docker.** An HTTP service is out of scope.
 
 ## Remaining (in order)
 
-- [ ] **N1. Version control.** `git init`, review `.gitignore`, first commit,
-  small meaningful commits from then on, push to a remote.
-- [ ] **N2. Checkpoint contract check.** Validate `architecture` and
-  `preprocessing.padding_per_side` against code at load time; make
-  `tests/test_checkpoint_contract.py` and the CLI contract test pass
-  (10 failing tests today, by design).
-- [ ] **N3. Training script.** One entry point (e.g. `python -m src.train`)
-  that runs the search on the 48k/12k split, then retrains the selected
-  configuration on all 60k images and writes the checkpoint. Move
-  `prepare_mnist_subset` and related helpers into `src/`. Decide the
-  checkpoint fields for a model trained without a validation split.
-- [ ] **N4. Run records.** Save per-epoch train/validation loss for each search
-  candidate and per-epoch train loss for the final run, plus environment
-  metadata (torch version, device, git commit, lockfile hash) in the checkpoint
-  and run outputs. Plot the curves.
-- [ ] **N5. Re-run and decision log.** Run the search with per-configuration
-  seeding; confirm the batch 64 / lr 1e-3 / decay 0 row reproduces
-  `eval_loss 0.042647618…`. Write one decision log covering the split, search
-  scope, chosen configuration, epoch count (from the curves), and the 60k
-  refit.
-- [ ] **N6. Evaluate through the shipped path.** Evaluate the new checkpoint on
-  CPU through `MnistInference`, not a notebook copy of the pipeline. Update the
-  README hash, metrics, and cited report; check `manifests/test_jpeg.sha256`
-  still verifies.
-- [ ] **N7. Error analysis and test-set note.** Confusion matrix, a grid of
-  misclassified images, limitations. State plainly what was and was not frozen
-  before test results were seen, for both the original and the 60k model.
-- [ ] **N8. Regeneration instructions.** Document how to reproduce every
-  artifact: checkpoint, exported test images and checksums, results, Docker
-  image.
-- [ ] **N9. CI.** GitHub Actions: tests, ruff, pyrefly, and Docker build on
-  every push.
-- [ ] **N10. Release v1.** Git tag, matching Docker image tag, and a written
-  rule relating code version, model version (checkpoint hash), and image tag.
+- [ ] **P1. Commit the pending CI fix** via branch → PR. Pending: the
+  `map_location` fix in `tests/test_checkpoint_contract.py` and this to-do.
+  CI on the PR must fail only on the 10 N2 contract tests; then merge.
+  From here on, every change goes branch → PR → green CI → merge.
+- [ ] **P2. Checkpoint contract check.** Validate `architecture` and
+  `preprocessing.padding_per_side` against code at load time; a mismatch
+  raises `ValueError` and the CLI exits 1 without a traceback. Done when all
+  25 tests pass locally and CI is fully green.
+- [ ] **P3. Training script** (e.g. `python -m src.train`). One command that:
+  runs the seeded search on the 48k/12k split; retrains the selected
+  configuration on all 60k images; saves a **CPU (device-neutral)**
+  checkpoint; records per-epoch losses, the selection evidence, and
+  traceability metadata (git commit, torch version, device, `uv.lock` hash).
+  Move `prepare_mnist_subset` into `src/`. Done when one command from a clean
+  checkout reproduces the checkpoint, and the batch 64 / lr 1e-3 / decay 0
+  search row reproduces `eval_loss 0.042647618…`.
+- [ ] **P4. Evaluation script.** Evaluate the new checkpoint on CPU through
+  `MnistInference` (the shipped code path), writing to `results/`. Replace the
+  cited report, README hash, and metrics; confirm
+  `manifests/test_jpeg.sha256` still verifies.
+- [ ] **P5. Model card** (README section): intended use, accepted inputs,
+  training data and the 60k refit, selection rationale, test metrics with the
+  report link, per-class accuracy, known limitations (inverted, off-centre,
+  multi-digit inputs), and an honest statement of test-set use. Include the
+  two reproduce commands (train, evaluate).
+- [ ] **P6. Release v1.0.0.** A CD workflow triggered by a `v*` tag builds the
+  image in CI and pushes it to GHCR as `ghcr.io/abbylxw/mnist-ocr:1.0.0`, with
+  the git commit and checkpoint SHA-256 as image labels. Document the rule:
+  one git tag = one image tag = one checkpoint hash.
 
-Next small task: N1, then N2 as the first real commit.
+Resume here: **P1**, then **P2**.
 
 ## Done
 
@@ -98,3 +100,10 @@ Next small task: N1, then N2 as the first real commit.
 - **Lean repository:** `.gitignore` excludes `data/`, extra `results/` runs,
   and `*.pth`; JPEG checksums in `manifests/test_jpeg.sha256`; artifact policy
   in `DEVELOPMENT.md`; unused test files removed (2026-10-24).
+- **Version control:** git repo on `main`, initial commit `4b4a6bc`; private
+  remote `https://github.com/abbylxw/mnist-ocr`, pushed 2026-10-25.
+- **CI:** `.github/workflows/ci.yml` on pushes to `main` and PRs. Job
+  `checks` runs uv at the `uv.lock` version, then tests, ruff, format check,
+  and pyrefly. Job `docker` builds the image and runs an offline prediction.
+  Actions are pinned by SHA. The first run (40224825126) caught an
+  MPS-tagged checkpoint load in a test; the fix is pending in P1.

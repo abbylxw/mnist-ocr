@@ -86,10 +86,14 @@ and honest documentation of what the model can and cannot do.
   the git commit and checkpoint SHA-256 as image labels. Document the rule:
   one git tag = one image tag = one checkpoint hash.
 
-Resume here: **P3, PR (b)** (the training script), once PR (a) on branch
-`train-data-helpers` is merged. PR (a) adds `src/data.py` (load, split,
-select, fit statistics, build dataset); the refactored notebook reproduces
-`models/checkpoint.pt` byte for byte.
+Resume here: **P3, PR (b)** is drafted on branch `training-script` (not yet
+committed): `src/train.py`, `configs/train.toml`, `tests/test_train.py`, and a
+Training section in `DEVELOPMENT.md`. Verified with `--allow-dirty`
+(2026-11-01): the full search reproduces the batch 64 / lr 1e-3 / decay 0 row
+exactly (`0.042647618104082845`), and that configuration wins; `final` trains
+on 60k (mean 25.5094, std 70.1804) and writes a 248 KB CPU checkpoint that
+predicts correctly. After review: commit, then run `search` and `final` on a
+clean tree for the real artifact (P4 swaps it in).
 
 ## Done
 

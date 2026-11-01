@@ -16,5 +16,8 @@ data/
 results/*
 !results/20261019T042353529283Z/
 
+# Training search runs; un-ignore only the run the model card cites.
+runs/*
+
 # Scratch weights; the committed artifact is models/checkpoint.pt.
 *.pth

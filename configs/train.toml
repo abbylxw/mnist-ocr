@@ -1,0 +1,30 @@
+# Training configuration for `python -m src.train`.
+# A final run refuses to use a search run made with a different version of
+# this file, so change it only together with a new search.
+
+[data]
+# Relative paths resolve from the project root.
+dir = "data"
+
+[split]
+# Search only: the final model trains on all training images.
+train_ratio = 0.8
+seed = 11
+
+[training]
+# Seeds model initialization and shuffle order for every run.
+seed = 11
+# Shared by search candidates and the final refit (same epochs, not steps).
+epochs = 5
+
+[search]
+batch_sizes = [32, 64, 128]
+learning_rates = [1e-4, 1e-3, 1e-2]
+weight_decays = [0, 1e-4, 1e-3, 1e-2]
+
+[selection]
+# Lowest final-epoch validation loss; ties go to the smaller learning rate,
+# then batch size, then weight decay. The only supported rule.
+rule = "min_final_validation_loss"
+# A final run refuses a winner below this validation accuracy.
+min_validation_accuracy = 0.98

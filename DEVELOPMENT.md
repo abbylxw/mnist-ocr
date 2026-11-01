@@ -34,6 +34,29 @@ The default trained artifact is `models/checkpoint.pt`. Run notebooks with
 Tests create temporary checkpoints and do not require the trained artifact;
 one contract test also checks `models/checkpoint.pt` when it is present.
 
+## Training
+
+Training is configured by `configs/train.toml` and runs in two steps from the
+project root:
+
+```bash
+uv run --locked python -m src.train search
+uv run --locked python -m src.train final --search-run runs/<id> --out PATH
+```
+
+`search` trains every grid candidate on the 80/20 split and writes
+`runs/<id>/search.json` (per-epoch losses, validation accuracy, provenance).
+`final` selects the winner by the configured rule, refuses it below the
+configured validation-accuracy floor, retrains it on all 60,000 training
+images, and writes a CPU checkpoint that is checked by loading it through
+`MnistInference`.
+
+Both refuse to run with uncommitted changes, so the recorded git commit
+identifies the code. `--allow-dirty` overrides this for experiments and is
+recorded as `git_dirty: true`; such checkpoints must not be released. `final`
+also refuses a search run made with a different config, and never overwrites
+an existing checkpoint. `--device` defaults to CUDA, then MPS, then CPU.
+
 ## Artifacts kept in the repository
 
 | Kept | Generated, not committed |

@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.utils.data import random_split
 from torchvision.transforms import v2
 from torchvision.transforms.functional import normalize
 
@@ -23,17 +22,6 @@ def padding_image(image):
 def normalize_image(padded_image, train_u, train_std):
     """Standardize one image or a batch using training-only statistics."""
     return normalize(padded_image, mean=[train_u], std=[train_std])
-
-
-def validation_split(data, train_ratio=0.8, *, generator=None):
-    """Split samples; pass a dedicated generator for repeatable indices."""
-    if not 0 < train_ratio < 1:
-        raise ValueError("train_ratio must be between 0 and 1.")
-    train_size = int(train_ratio * len(data))
-    validation_size = len(data) - train_size
-    if min(train_size, validation_size) == 0:
-        raise ValueError("Both subsets must contain at least one sample.")
-    return random_split(data, [train_size, validation_size], generator=generator)
 
 
 def check_data_input(raw_data):

@@ -170,3 +170,51 @@ class InputContractTests(unittest.TestCase):
                 self.assertIn(field, result.stderr)
                 self.assertNotIn("Accepted input:", result.stderr)
                 self.assertNotIn("Traceback", result.stderr)
+
+    def test_cli_reject_unusable_checkpoint(self):
+        missing_weights = make_checkpoint()
+        del missing_weights["model_state_dict"]
+        resized_weights = make_checkpoint()
+        resized_weights["model_state_dict"]["conv2d_relu_stack.0.weight"] = torch.zeros(
+            3, 1, 5, 5
+        )
+        cases = {
+            "not a checkpoint": b"junk\n",
+            "missing weights": missing_weights,
+            "resized weights": resized_weights,
+        }
+        for name, content in cases.items():
+            with self.subTest(case=name):
+                with tempfile.TemporaryDirectory() as directory:
+                    image = torch.zeros((1, 28, 28), dtype=torch.uint8)
+                    image_path = Path(directory) / "image.png"
+                    checkpoint_path = Path(directory) / "checkpoint.pt"
+                    Image.fromarray(image.squeeze(0).numpy()).save(
+                        image_path, format="PNG"
+                    )
+                    if isinstance(content, bytes):
+                        checkpoint_path.write_bytes(content)
+                    else:
+                        torch.save(content, checkpoint_path)
+
+                    result = self._run_cli(image_path, "--checkpoint", checkpoint_path)
+
+                # Assert: an unusable checkpoint is a setup error, not a crash.
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("Could not load checkpoint", result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+
+    def test_cli_reject_directory_as_checkpoint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            image = torch.zeros((1, 28, 28), dtype=torch.uint8)
+            image_path = Path(directory) / "image.png"
+            Image.fromarray(image.squeeze(0).numpy()).save(image_path, format="PNG")
+
+            result = self._run_cli(image_path, "--checkpoint", directory)
+
+        # Assert: a directory is reported like any other unusable path.
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("Could not load checkpoint", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)

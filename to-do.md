@@ -30,22 +30,48 @@ and honest documentation of what the model can and cannot do.
 
 ## Remaining (in order)
 
-- [ ] **P1. Commit the pending CI fix** via branch → PR. Pending: the
-  `map_location` fix in `tests/test_checkpoint_contract.py` and this to-do.
-  CI on the PR must fail only on the 10 N2 contract tests; then merge.
+- [x] **P1. Commit the pending CI fix** via branch → PR (PR #1, merged
+  2026-10-28). CI failed only on the 10 contract tests, as expected.
   From here on, every change goes branch → PR → green CI → merge.
-- [ ] **P2. Checkpoint contract check.** Validate `architecture` and
-  `preprocessing.padding_per_side` against code at load time; a mismatch
-  raises `ValueError` and the CLI exits 1 without a traceback. Done when all
-  25 tests pass locally and CI is fully green.
-- [ ] **P3. Training script** (e.g. `python -m src.train`). One command that:
-  runs the seeded search on the 48k/12k split; retrains the selected
-  configuration on all 60k images; saves a **CPU (device-neutral)**
-  checkpoint; records per-epoch losses, the selection evidence, and
-  traceability metadata (git commit, torch version, device, `uv.lock` hash).
-  Move `prepare_mnist_subset` into `src/`. Done when one command from a clean
-  checkout reproduces the checkpoint, and the batch 64 / lr 1e-3 / decay 0
-  search row reproduces `eval_loss 0.042647618…`.
+- [x] **P2. Checkpoint contract check** (PR #2, merged 2026-10-28; first fully
+  green CI). `ARCHITECTURE` and `PADDING_PER_SIDE` are constants in
+  `nn_model.py` and `preprocessing.py`; `MnistInference` validates both before
+  loading weights. Follow-up in PR (a): unreadable files, non-dictionary
+  checkpoints, missing or ill-fitting `model_state_dict`, and directory paths
+  also exit 1 without a traceback.
+- [ ] **P3. Training script.** Design agreed 2026-10-31:
+  - **Config:** TOML file (stdlib `tomllib`), e.g. `configs/train.toml`,
+    holding the search grid, epochs, seeds, split ratio, selection rule, and
+    sanity floor. Its contents or hash are stored in every output.
+  - **Modes (one required):** `--search` writes all rows, per-epoch losses,
+    and metadata (git commit, config hash, torch version) to `runs/<id>/`.
+    `--final --search-run runs/<id>/` **auto-selects the winner** from that
+    run and retrains it on all 60k images.
+  - **Auto-select guardrails:** explicit rule (lowest final-epoch validation
+    loss; fixed tie-break) recorded by name; `--final` refuses if the winner's
+    validation accuracy is below the config's floor; the cited search run is
+    committed so model changes show their evidence in the PR.
+  - **60k refit:** normalization statistics recomputed on 60k; **same epoch
+    count** as the search (≈25% more steps per epoch); the reason is recorded
+    in the model card.
+  - **Checkpoint:** tensors on CPU; search evidence (run path and hash, rule,
+    winner's validation loss and accuracy) stored separately from this model's
+    own fields; git commit, `git_dirty`, config hash, `uv.lock` hash, torch
+    version, device.
+  - **Git cleanliness:** refuse if `git status --porcelain` is non-empty
+    unless `--allow-dirty`, which records `git_dirty: true`. Releases (P4/P6)
+    reject dirty checkpoints.
+  - **`runs/`:** ignored except the one run the model card cites.
+  - **PR (a):** move `prepare_mnist_subset` into `src/` with an image-label
+    alignment test; make the CLI exit 1 without a traceback for a non-checkpoint
+    file, missing `model_state_dict`, or mismatched weights (P2 review); tick
+    P1 and P2.
+  - **PR (b):** the training script. Write the checkpoint outside `models/`;
+    swapping it in happens in P4.
+  - Done when: both modes run from a clean checkout; the batch 64 / lr 1e-3 /
+    decay 0 search row reproduces `eval_loss 0.042647618…`; the new checkpoint
+    loads through `MnistInference` and passes the contract tests; CI is green
+    on both PRs.
 - [ ] **P4. Evaluation script.** Evaluate the new checkpoint on CPU through
   `MnistInference` (the shipped code path), writing to `results/`. Replace the
   cited report, README hash, and metrics; confirm
@@ -60,7 +86,10 @@ and honest documentation of what the model can and cannot do.
   the git commit and checkpoint SHA-256 as image labels. Document the rule:
   one git tag = one image tag = one checkpoint hash.
 
-Resume here: **P1**, then **P2**.
+Resume here: **P3, PR (b)** (the training script), once PR (a) on branch
+`train-data-helpers` is merged. PR (a) adds `src/data.py` (load, split,
+select, fit statistics, build dataset); the refactored notebook reproduces
+`models/checkpoint.pt` byte for byte.
 
 ## Done
 
@@ -106,4 +135,4 @@ Resume here: **P1**, then **P2**.
   `checks` runs uv at the `uv.lock` version, then tests, ruff, format check,
   and pyrefly. Job `docker` builds the image and runs an offline prediction.
   Actions are pinned by SHA. The first run (40224825126) caught an
-  MPS-tagged checkpoint load in a test; the fix is pending in P1.
+  MPS-tagged checkpoint load in a test; fixed in P1.

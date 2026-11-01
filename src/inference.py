@@ -8,9 +8,20 @@ class MnistInference:
     def __init__(self, checkpoint_path, device):
         self.device = device
         self.checkpoint_path = checkpoint_path
-        self.loaded_checkpoint = torch.load(
-            self.checkpoint_path, map_location=self.device, weights_only=True
-        )
+        try:
+            self.loaded_checkpoint = torch.load(
+                self.checkpoint_path, map_location=self.device, weights_only=True
+            )
+        except OSError:
+            # Missing, unreadable, or directory paths; callers report these.
+            raise
+        except Exception as error:
+            # Arbitrary bytes fail deserialization in many ways (UnpicklingError,
+            # EOFError, KeyError, RuntimeError, ...); all mean the same thing here.
+            raise ValueError(f"Not a readable PyTorch checkpoint: {error!r}") from error
+        if not isinstance(self.loaded_checkpoint, dict):
+            raise ValueError("Expected the checkpoint to contain a dictionary.")
+
         architecture = self.loaded_checkpoint.get("architecture")
         if architecture != nn_model.ARCHITECTURE:
             raise ValueError(
@@ -30,9 +41,19 @@ class MnistInference:
                 f"received {padding!r}."
             )
 
+        state_dict = self.loaded_checkpoint.get("model_state_dict")
+        if not isinstance(state_dict, dict):
+            raise ValueError("Expected model weights in model_state_dict.")
+
         self.saved_preprocessing = saved_preprocessing
         self.loaded_model = nn_model.NeuralNetwork().to(self.device)
-        self.loaded_model.load_state_dict(self.loaded_checkpoint["model_state_dict"])
+        try:
+            self.loaded_model.load_state_dict(state_dict)
+        except RuntimeError as error:
+            # Missing, unexpected, or wrongly shaped tensors.
+            raise ValueError(
+                f"model_state_dict does not fit {nn_model.ARCHITECTURE!r}: {error}"
+            ) from error
         self.loaded_model.eval()
 
     def predict(self, image):

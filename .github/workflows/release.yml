@@ -1,0 +1,80 @@
+name: Release
+
+# Pushing a tag vX.Y.Z publishes ghcr.io/<owner>/mnist-ocr:X.Y.Z.
+# One git tag = one image tag = one checkpoint hash.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_name }}
+      IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history for the main-branch check
+
+      # Releases come only from code that passed CI and merged.
+      - name: Tagged commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Tag matches the project version
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          test "$TAG" = "v$version"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Bundled checkpoint matches its evaluation report
+        run: |
+          reports=(results/*/summary.json)
+          test "${#reports[@]}" -eq 1
+          checkpoint_sha256=$(sha256sum models/checkpoint.pt | cut -d' ' -f1)
+          test "$(jq -r .checkpoint.sha256 "${reports[0]}")" = "$checkpoint_sha256"
+          echo "CHECKPOINT_SHA256=$checkpoint_sha256" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Published image tags are never overwritten.
+      - name: Image tag is unused
+        run: |
+          image="${IMAGE,,}:$VERSION"
+          if docker manifest inspect "$image" > /dev/null 2>&1; then
+            echo "$image already exists" >&2
+            exit 1
+          fi
+
+      - name: Build image
+        run: |
+          docker build \
+            --label org.opencontainers.image.source="https://github.com/${{ github.repository }}" \
+            --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            --label org.opencontainers.image.version="$VERSION" \
+            --label mnist-ocr.checkpoint.sha256="$CHECKPOINT_SHA256" \
+            -t "${IMAGE,,}:$VERSION" .
+
+      - name: Checkpoint was trained from committed code
+        run: |
+          docker run --rm --network none --entrypoint python "${IMAGE,,}:$VERSION" -c '
+          import torch
+          checkpoint = torch.load("models/checkpoint.pt", weights_only=True)
+          assert checkpoint["provenance"]["git_dirty"] is False, "dirty checkpoint"
+          '
+
+      - name: Predict example image
+        run: |
+          output=$(docker run --rm --network none \
+            --mount "type=bind,source=$PWD/tests/test_images,target=/inputs,readonly" \
+            "${IMAGE,,}:$VERSION" /inputs/1_label_2.png --label 2)
+          echo "$output"
+          grep -qx "Predicted digit: 2" <<< "$output"
+
+      - name: Push image
+        run: docker push "${IMAGE,,}:$VERSION"

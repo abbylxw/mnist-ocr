@@ -95,6 +95,22 @@ set is not used to choose between models.
    in `.gitignore` (dropping the previous ones), and update the README model
    card and checkpoint hash.
 4. Merge the PR only with green CI.
+5. To publish, bump `version` in `pyproject.toml` (then `uv lock`) in that PR,
+   and after merging tag the merge commit:
+
+   ```bash
+   git checkout main && git pull
+   git tag -a v1.0.0 -m "v1.0.0"
+   git push origin v1.0.0
+   ```
+
+`.github/workflows/release.yml` runs on the tag. It refuses a tag that is not
+on `main`, does not match the project version, or already has an image; a
+bundled checkpoint that does not match the committed report or was trained
+from uncommitted code; and an image that fails the example prediction. It then
+pushes `ghcr.io/abbylxw/mnist-ocr:<version>` labelled with the git commit and
+checkpoint SHA-256. One git tag = one image tag = one checkpoint hash: to ship
+a different checkpoint, release a new version.
 
 ## Artifacts kept in the repository
 

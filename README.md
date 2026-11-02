@@ -25,6 +25,20 @@ Predicted digit: 2
 True digit: 2
 ```
 
+Released images are published to GitHub Container Registry. The repository
+is private, so log in first with a personal access token that has the
+`read:packages` scope:
+
+```bash
+echo "$GHCR_TOKEN" | docker login ghcr.io -u abbylxw --password-stdin
+docker run --rm \
+  --mount "type=bind,source=$(pwd)/tests/test_images,target=/inputs,readonly" \
+  ghcr.io/abbylxw/mnist-ocr:1.0.0 /inputs/1_label_2.png --label 2
+```
+
+Each image records its git commit and checkpoint SHA-256 as labels:
+`docker image inspect ghcr.io/abbylxw/mnist-ocr:1.0.0 --format '{{json .Config.Labels}}'`.
+
 For your own image, change `source` to its directory's absolute host path and
 pass `/inputs/<filename>` to the CLI. CLI paths refer to files inside the
 container. `--label` is optional; it displays a known label for comparison.
@@ -38,6 +52,7 @@ prints the prediction and exits; `--rm` removes it afterward.
 
 | | |
 |---|---|
+| Version | 1.0.0 (`ghcr.io/abbylxw/mnist-ocr:1.0.0`) |
 | Model | LeNet-5-style CNN, `lenet5_relu_maxpool_dense_v1` (61,706 parameters; section 5) |
 | Checkpoint | `models/checkpoint.pt`, SHA-256 `eedb4358ce3940d96fa6e5843b0c3d95544b086571d8e12f5ffcc6a0a3209aaf` |
 | Trained from | commit `d8b292a`, clean tree, PyTorch 2.14.0 on MPS |

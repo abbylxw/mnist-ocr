@@ -99,8 +99,10 @@ scope) follows the release steps in `DEVELOPMENT.md` with a new version.
 - **Lean repository:** `.gitignore` excludes `data/`, extra `results/` runs,
   and `*.pth`; JPEG checksums in `manifests/test_jpeg.sha256`; artifact policy
   in `DEVELOPMENT.md`; unused test files removed (2026-10-24).
-- **Version control:** git repo on `main`, initial commit `4b4a6bc`; private
-  remote `https://github.com/abbylxw/mnist-ocr`, pushed 2026-10-25.
+- **Version control:** git repo on `main`, initial commit `4b4a6bc`; remote
+  `https://github.com/abbylxw/mnist-ocr`, pushed 2026-10-25, public with a
+  public image since 2026-11-02 (MIT licence). Branch protection on `main`
+  requires green CI (free for public repositories).
 - **CI:** `.github/workflows/ci.yml` on pushes to `main` and PRs. Job
   `checks` runs uv at the `uv.lock` version, then tests, ruff, format check,
   and pyrefly. Job `docker` builds the image and runs an offline prediction.

@@ -25,16 +25,17 @@ Predicted digit: 2
 True digit: 2
 ```
 
-Released images are published to GitHub Container Registry. The repository
-is private, so log in first with a personal access token that has the
-`read:packages` scope:
+Released images are published to GitHub Container Registry and can be run
+without building:
 
 ```bash
-echo "$GHCR_TOKEN" | docker login ghcr.io -u abbylxw --password-stdin
 docker run --rm \
   --mount "type=bind,source=$(pwd)/tests/test_images,target=/inputs,readonly" \
   ghcr.io/abbylxw/mnist-ocr:1.0.0 /inputs/1_label_2.png --label 2
 ```
+
+Images are built for linux/amd64; on Apple Silicon, Docker runs them under
+emulation and prints a platform warning.
 
 Each image records its git commit and checkpoint SHA-256 as labels:
 `docker image inspect ghcr.io/abbylxw/mnist-ocr:1.0.0 --format '{{json .Config.Labels}}'`.
@@ -435,3 +436,11 @@ and inference runtimes. It requires an export step and verification that the
 exported model preserves predictions. Performance and deployment-size benefits
 depend on the runtime, hardware, and optimizations and must be measured. That
 additional workflow is unnecessary for the current V1 scope.
+
+## Licence and data
+
+The code and the trained checkpoint are released under the [MIT licence](LICENSE).
+The model is trained on the [MNIST database](https://yann.lecun.com/exdb/mnist/)
+of handwritten digits by Yann LeCun, Corinna Cortes, and Christopher J.C.
+Burges, downloaded through `torchvision.datasets.MNIST`. MNIST is not included
+in this repository.

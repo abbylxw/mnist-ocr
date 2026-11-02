@@ -1,0 +1,371 @@
+{
+  "created_at_utc": "2026-11-02T04:00:50.023821+00:00",
+  "checkpoint": {
+    "path": "models/checkpoint.pt",
+    "sha256": "eedb4358ce3940d96fa6e5843b0c3d95544b086571d8e12f5ffcc6a0a3209aaf",
+    "architecture": "lenet5_relu_maxpool_dense_v1",
+    "training": {
+      "optimizer": "Adam",
+      "batch_size": 64,
+      "learning_rate": 0.001,
+      "weight_decay": 0,
+      "epochs": 5,
+      "seed": 11,
+      "train_samples": 60000,
+      "epoch_train_losses": [
+        0.24381313276141883,
+        0.06436106831257542,
+        0.04481575920631488,
+        0.0363984485183532,
+        0.029894798417047907
+      ]
+    },
+    "selection": {
+      "rule": "min_final_validation_loss",
+      "search_run": "runs/20261101T074423Z/search.json",
+      "search_run_sha256": "3154b34678c2275767b90d6e8f773b9321b59335ce561b4ade0125ea67baf651",
+      "search_git_commit": "d8b292a86d409257ad43cf4c186f3ab635741e4b",
+      "split": {
+        "seed": 11,
+        "train_ratio": 0.8,
+        "train_samples": 48000,
+        "validation_samples": 12000
+      },
+      "validation_loss": 0.042647618104082845,
+      "validation_accuracy": 0.98725
+    },
+    "provenance": {
+      "created_at_utc": "2026-11-01T23:57:29.529662+00:00",
+      "git_commit": "d8b292a86d409257ad43cf4c186f3ab635741e4b",
+      "git_dirty": false,
+      "config_sha256": "0ac625e6987d58ca60ebf485c8525866a702f9bf0b6b20d60ddfd57882a0c962",
+      "uv_lock_sha256": "08b997b39cc48562acb26463b2646fbdc157cbb1e45bc9e0e5dcf6c2c793533f",
+      "torch_version": "2.14.0",
+      "device": "mps"
+    }
+  },
+  "dataset": {
+    "name": "MNIST",
+    "split": "test",
+    "sample_count": 10000,
+    "source_id": "original index in MNIST test split"
+  },
+  "encoding": {
+    "pillow_version": "12.3.0",
+    "jpeg_codec_version": "6.2",
+    "image_mode": "L",
+    "jpeg_quality": 75,
+    "png_save_options": "Pillow defaults",
+    "jpeg_manifest_sha256": "ab42cb478c17f5b1263eb91540def60739ed12e56ab1ead470d396cbd22deb07"
+  },
+  "preprocessing": {
+    "input_shape": [
+      1,
+      28,
+      28
+    ],
+    "input_dtype": "uint8",
+    "pixel_range": [
+      0,
+      255
+    ],
+    "padding_per_side": 2,
+    "padding_value": 0,
+    "output_dtype": "float32",
+    "scale_to_unit_interval": false,
+    "train_mean": 25.509416580200195,
+    "train_std": 70.18042755126953
+  },
+  "provenance": {
+    "git_commit": "ccf458a5e6f3dc1717c7cb139c753c2d18e94b7b",
+    "git_dirty": false,
+    "torch_version": "2.14.0",
+    "device": "cpu"
+  },
+  "metrics": {
+    "source_pairs": 10000,
+    "png_accuracy": 0.9905,
+    "png_cross_entropy_loss": 0.030390099695811544,
+    "png_brier_loss": 0.0149024983485136,
+    "jpg_accuracy": 0.9911,
+    "jpg_cross_entropy_loss": 0.029916492347258048,
+    "jpg_brier_loss": 0.01469340182737307,
+    "disagreement_count": 11,
+    "disagreement_rate": 0.0011,
+    "correct_to_wrong": 2,
+    "wrong_to_correct": 8,
+    "wrong_to_different_wrong": 1
+  },
+  "per_class_accuracy": {
+    "png": {
+      "0": 0.9959183673469387,
+      "1": 0.9947136563876652,
+      "2": 0.9951550387596899,
+      "3": 0.9920792079207921,
+      "4": 0.9928716904276986,
+      "5": 0.9887892376681614,
+      "6": 0.9843423799582464,
+      "7": 0.9902723735408561,
+      "8": 0.9845995893223819,
+      "9": 0.9851337958374629
+    },
+    "jpg": {
+      "0": 0.9959183673469387,
+      "1": 0.9947136563876652,
+      "2": 0.9961240310077519,
+      "3": 0.9930693069306931,
+      "4": 0.9938900203665988,
+      "5": 0.9887892376681614,
+      "6": 0.9864300626304802,
+      "7": 0.9902723735408561,
+      "8": 0.9845995893223819,
+      "9": 0.9861248761149654
+    }
+  },
+  "confusion_matrix": {
+    "png": [
+      [
+        976,
+        0,
+        1,
+        0,
+        0,
+        0,
+        2,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1129,
+        1,
+        1,
+        0,
+        1,
+        2,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1027,
+        1,
+        1,
+        0,
+        0,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        3,
+        1002,
+        0,
+        3,
+        0,
+        1,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        975,
+        0,
+        0,
+        1,
+        0,
+        6
+      ],
+      [
+        2,
+        0,
+        0,
+        5,
+        0,
+        882,
+        1,
+        0,
+        1,
+        1
+      ],
+      [
+        2,
+        2,
+        0,
+        0,
+        3,
+        7,
+        943,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        3,
+        4,
+        0,
+        0,
+        0,
+        0,
+        1018,
+        0,
+        3
+      ],
+      [
+        1,
+        0,
+        4,
+        3,
+        0,
+        2,
+        0,
+        2,
+        959,
+        3
+      ],
+      [
+        0,
+        2,
+        0,
+        0,
+        4,
+        2,
+        0,
+        5,
+        2,
+        994
+      ]
+    ],
+    "jpg": [
+      [
+        976,
+        0,
+        0,
+        1,
+        0,
+        0,
+        2,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1129,
+        1,
+        1,
+        0,
+        1,
+        2,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        1028,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        3,
+        1003,
+        0,
+        2,
+        0,
+        1,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        976,
+        0,
+        0,
+        1,
+        0,
+        5
+      ],
+      [
+        2,
+        0,
+        0,
+        5,
+        0,
+        882,
+        1,
+        0,
+        1,
+        1
+      ],
+      [
+        2,
+        2,
+        0,
+        0,
+        3,
+        6,
+        945,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        3,
+        4,
+        0,
+        0,
+        0,
+        0,
+        1018,
+        0,
+        3
+      ],
+      [
+        1,
+        0,
+        5,
+        3,
+        0,
+        1,
+        0,
+        2,
+        959,
+        3
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        4,
+        2,
+        0,
+        5,
+        2,
+        995
+      ]
+    ]
+  }
+}

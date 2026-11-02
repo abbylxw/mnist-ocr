@@ -1,6 +1,6 @@
 # MNIST project: progress and remaining work
 
-Updated: 2026-10-27. Goal: take the project through the full cycle (model
+Updated: 2026-11-02. Goal: take the project through the full cycle (model
 development, evaluation, inference/deployment, version control) to a
 production-level standard. Only items a production model requires are listed:
 a versioned, reproducible, traceable artifact; checks that block bad changes;
@@ -39,61 +39,25 @@ and honest documentation of what the model can and cannot do.
   loading weights. Follow-up in PR (a): unreadable files, non-dictionary
   checkpoints, missing or ill-fitting `model_state_dict`, and directory paths
   also exit 1 without a traceback.
-- [ ] **P3. Training script.** Design agreed 2026-10-31:
-  - **Config:** TOML file (stdlib `tomllib`), e.g. `configs/train.toml`,
-    holding the search grid, epochs, seeds, split ratio, selection rule, and
-    sanity floor. Its contents or hash are stored in every output.
-  - **Modes (one required):** `--search` writes all rows, per-epoch losses,
-    and metadata (git commit, config hash, torch version) to `runs/<id>/`.
-    `--final --search-run runs/<id>/` **auto-selects the winner** from that
-    run and retrains it on all 60k images.
-  - **Auto-select guardrails:** explicit rule (lowest final-epoch validation
-    loss; fixed tie-break) recorded by name; `--final` refuses if the winner's
-    validation accuracy is below the config's floor; the cited search run is
-    committed so model changes show their evidence in the PR.
-  - **60k refit:** normalization statistics recomputed on 60k; **same epoch
-    count** as the search (≈25% more steps per epoch); the reason is recorded
-    in the model card.
-  - **Checkpoint:** tensors on CPU; search evidence (run path and hash, rule,
-    winner's validation loss and accuracy) stored separately from this model's
-    own fields; git commit, `git_dirty`, config hash, `uv.lock` hash, torch
-    version, device.
-  - **Git cleanliness:** refuse if `git status --porcelain` is non-empty
-    unless `--allow-dirty`, which records `git_dirty: true`. Releases (P4/P6)
-    reject dirty checkpoints.
-  - **`runs/`:** ignored except the one run the model card cites.
-  - **PR (a):** move `prepare_mnist_subset` into `src/` with an image-label
-    alignment test; make the CLI exit 1 without a traceback for a non-checkpoint
-    file, missing `model_state_dict`, or mismatched weights (P2 review); tick
-    P1 and P2.
-  - **PR (b):** the training script. Write the checkpoint outside `models/`;
-    swapping it in happens in P4.
-  - Done when: both modes run from a clean checkout; the batch 64 / lr 1e-3 /
-    decay 0 search row reproduces `eval_loss 0.042647618…`; the new checkpoint
-    loads through `MnistInference` and passes the contract tests; CI is green
-    on both PRs.
-- [ ] **P4. Evaluation script.** Evaluate the new checkpoint on CPU through
-  `MnistInference` (the shipped code path), writing to `results/`. Replace the
-  cited report, README hash, and metrics; confirm
-  `manifests/test_jpeg.sha256` still verifies.
-- [ ] **P5. Model card** (README section): intended use, accepted inputs,
-  training data and the 60k refit, selection rationale, test metrics with the
-  report link, per-class accuracy, known limitations (inverted, off-centre,
-  multi-digit inputs), and an honest statement of test-set use. Include the
-  two reproduce commands (train, evaluate).
+- [x] **P3. Training script** (PR #4, merged 2026-11-01). `src/train.py`
+  with `search` and `final` modes, config in `configs/train.toml`. Clean-tree
+  search `runs/20261101T074423Z` reproduced the batch 64 / lr 1e-3 / decay 0
+  row (`0.042647618…`) and selected it; the 60k refit is checkpoint
+  `eedb4358…` (commit `d8b292a`).
+- [x] **P4. Evaluation script** (PR #5). `src/evaluate.py` evaluates on CPU
+  through `MnistInference`, checks JPEGs against the manifest, and refuses
+  dirty trees or checkpoints. It reproduced the old report's counts exactly.
+  New checkpoint shipped; report `results/20261102T040050Z` (PNG 99.05%,
+  JPEG 99.11%); CI checks the bundled checkpoint against the report hash.
+- [x] **P5. Model card** (PR #5): README section covering use, inputs, data,
+  selection, metrics, per-class accuracy, limitations, test-set use, and
+  reproduce commands. README section 8 describes the new checkpoint layout.
 - [ ] **P6. Release v1.0.0.** A CD workflow triggered by a `v*` tag builds the
   image in CI and pushes it to GHCR as `ghcr.io/abbylxw/mnist-ocr:1.0.0`, with
   the git commit and checkpoint SHA-256 as image labels. Document the rule:
   one git tag = one image tag = one checkpoint hash.
 
-Resume here: **P3, PR (b)** is drafted on branch `training-script` (not yet
-committed): `src/train.py`, `configs/train.toml`, `tests/test_train.py`, and a
-Training section in `DEVELOPMENT.md`. Verified with `--allow-dirty`
-(2026-11-01): the full search reproduces the batch 64 / lr 1e-3 / decay 0 row
-exactly (`0.042647618104082845`), and that configuration wins; `final` trains
-on 60k (mean 25.5094, std 70.1804) and writes a 248 KB CPU checkpoint that
-predicts correctly. After review: commit, then run `search` and `final` on a
-clean tree for the real artifact (P4 swaps it in).
+Resume here: **P6** (release workflow and v1.0.0 tag).
 
 ## Done
 

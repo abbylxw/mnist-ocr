@@ -1,8 +1,10 @@
 [Development setup and tool commands](DEVELOPMENT.md)
 
 The trained checkpoint is stored at `models/checkpoint.pt`. It contains model
-weights, preprocessing statistics, and training metadata. The CLI uses this path
-by default when run from the project root; use `--checkpoint PATH` to override it.
+weights, preprocessing statistics, training settings, selection evidence, and
+provenance. The CLI uses this path by default when run from the project root;
+use `--checkpoint PATH` to override it. See the [model card](#model-card) for
+what the model is for and how well it works.
 
 ## Run with Docker
 
@@ -31,6 +33,87 @@ Inputs must be PNG or JPEG images decoding to 28×28 grayscale uint8 pixels,
 with one centered light digit on a dark background (MNIST-style). The checkpoint
 is bundled; no local Python setup or checkpoint mount is required. The container
 prints the prediction and exits; `--rm` removes it afterward.
+
+## Model card
+
+| | |
+|---|---|
+| Model | LeNet-5-style CNN, `lenet5_relu_maxpool_dense_v1` (61,706 parameters; section 5) |
+| Checkpoint | `models/checkpoint.pt`, SHA-256 `eedb4358ce3940d96fa6e5843b0c3d95544b086571d8e12f5ffcc6a0a3209aaf` |
+| Trained from | commit `d8b292a`, clean tree, PyTorch 2.14.0 on MPS |
+| Evaluated by | [results/20261102T040050Z](results/20261102T040050Z/summary.json), commit `ccf458a`, CPU |
+
+**Intended use.** Classifying one handwritten digit (0–9) in an MNIST-style
+image, as a hands-on learning project covering training, evaluation, packaging,
+and release. It is not intended for real-world documents, photographs, or any
+decision with consequences.
+
+**Inputs and output.** A PNG or JPEG decoding to a 28×28 grayscale uint8 image
+containing one centered light digit on a dark background. Shape, channel count,
+and dtype are validated; image content is not. The CLI prints the most likely
+digit; the model always outputs one of the ten digits, with no rejection of
+non-digit inputs.
+
+**Training data.** All 60,000 images of the MNIST training split. Images are
+zero-padded to 32×32 and standardized with statistics from all 60,000 padded
+images (mean 25.5094, standard deviation 70.1804).
+
+**Training procedure.** Adam, batch size 64, learning rate 0.001, no weight
+decay, 5 epochs, seed 11 (`configs/train.toml`). Final-epoch training loss
+0.0299.
+
+**How the settings were chosen.** A 36-candidate grid (batch size 32/64/128 ×
+learning rate 1e-4/1e-3/1e-2 × weight decay 0/1e-4/1e-3/1e-2) was trained on a
+fixed 48,000/12,000 split (seed 11). The rule, chosen before the search, takes
+the lowest final-epoch validation cross-entropy, with a validation accuracy floor
+of 98%. The winner reached validation loss 0.0426 and accuracy 98.73%
+([search run](runs/20261101T074423Z/search.json)). It was then retrained on all
+60,000 images for the same 5 epochs (938 instead of 750 steps per epoch), so the
+shipped model uses all labelled training data. The trade-off: the shipped model
+has no held-out validation set of its own, and its validation numbers above
+describe the 48,000-image candidate, not this model.
+
+**Test results** (10,000 MNIST test images, each evaluated as PNG and as
+quality-75 JPEG; section 7):
+
+| Metric | PNG | JPEG |
+|---|---:|---:|
+| Accuracy | 99.05% | 99.11% |
+| Mean cross-entropy | 0.0304 | 0.0299 |
+| Mean Brier score | 0.0149 | 0.0147 |
+
+Per-class accuracy (PNG): 0: 99.6%, 1: 99.5%, 2: 99.5%, 3: 99.2%, 4: 99.3%,
+5: 98.9%, 6: 98.4%, 7: 99.0%, 8: 98.5%, 9: 98.5%. The most frequent errors are
+6 read as 5 (7 images), 4 as 9 (6), 5 as 3 (5), and 9 as 7 (5). Full confusion
+matrices are in the report.
+
+**Limitations.**
+
+- Measured only on MNIST, which comes from the same distribution as the
+  training data. Performance on other handwriting, scans, or photos is unknown.
+- Dark digits on a light background, off-centre or rescaled digits, several
+  digits, and non-digit images pass input validation but are likely to be
+  misclassified, and the model gives no warning.
+- Inputs that are not 28×28 grayscale are rejected rather than resized.
+- One training seed was run; the variation between seeds is not measured, so
+  small differences from other models (such as the previous 48,000-image
+  checkpoint's 98.74%) are not established as significant.
+
+**Use of the test set.** Hyperparameters were selected on the validation split
+only. The test set was evaluated once for the previous 48,000-image checkpoint
+and once for this model. No training or selection setting was changed after
+seeing this model's test results.
+
+**Reproduce** (from a clean checkout; `data/` is downloaded on first use):
+
+```bash
+uv run --locked python -m src.train search     # prints "Saved search run to runs/RUN_ID"
+uv run --locked python -m src.train final --search-run runs/RUN_ID --out /tmp/checkpoint.pt
+uv run --locked python -m src.evaluate --checkpoint /tmp/checkpoint.pt
+```
+
+On the same hardware and library versions, `search` reproduces the cited run's
+losses. GPU results can differ slightly between devices and library versions.
 
 
 
@@ -266,21 +349,21 @@ PNG: no explicit save options; Pillow defaults
 
 | Metric             | Definition and aggregation across images                                                                           | PNG result   | JPEG result  |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------ | ------------ |
-| Accuracy           | Correct predictions divided by 10,000 images for that encoding                                                     | 98.74% | 98.72% |
-| Mean cross-entropy | Sum the per-image cross-entropy values and divide by 10,000 images for that encoding                               | 0.03556320 | 0.03586963 |
-| Mean Brier score   | Sum the per-image Brier scores (each already summed over 10 classes) and divide by 10,000 images for that encoding | 0.01830397 | 0.01854628 |
+| Accuracy           | Correct predictions divided by 10,000 images for that encoding                                                     | 99.05% | 99.11% |
+| Mean cross-entropy | Sum the per-image cross-entropy values and divide by 10,000 images for that encoding                               | 0.03039010 | 0.02991649 |
+| Mean Brier score   | Sum the per-image Brier scores (each already summed over 10 classes) and divide by 10,000 images for that encoding | 0.01490250 | 0.01469340 |
 
-Recorded evaluation: [summary JSON](results/20261019T042353529283Z/summary.json)
-and [per-image results](results/20261019T042353529283Z/per_image_results.csv),
-created October 19, 2026 (UTC), using MPS and JPEG quality 75. The report's
-checkpoint SHA-256 matches the bundled `models/checkpoint.pt`:
-`103a167951fa73b17ef2696fe57d8f4af50615e9ba8877d7d8549aa5e12245b9`.
+Recorded evaluation: [summary JSON](results/20261102T040050Z/summary.json)
+and [per-image results](results/20261102T040050Z/per_image_results.csv),
+created November 2, 2026 (UTC) by `python -m src.evaluate` on CPU from commit
+`ccf458a`, using JPEG quality 75. The report's checkpoint SHA-256 matches the
+bundled `models/checkpoint.pt`:
+`eedb4358ce3940d96fa6e5843b0c3d95544b086571d8e12f5ffcc6a0a3209aaf`.
 
-Across 10,000 source pairs, four predictions changed (0.04%): three correct →
-wrong, one wrong → correct, and zero wrong → different wrong class. Both
-encodings exceeded the V1 accuracy target of 90%. These are recorded test
-results; they do not establish that model-selection decisions were frozen
-before evaluation.
+Across 10,000 source pairs, eleven predictions changed (0.11%): two correct →
+wrong, eight wrong → correct, and one wrong → different wrong class. Both
+encodings exceeded the V1 accuracy target of 90%. The model card describes how
+the test set was used.
 
 #### Success criteria and interpretation
 
@@ -290,17 +373,27 @@ before evaluation.
 
 ## 8. What artifact must training produce so inference does not depend on training code?
 
-**V1 decision:** training saves a PyTorch checkpoint at `models/checkpoint.pt`.
-The application Docker image bundles this checkpoint, the Python source, and
-runtime dependencies. Users do not need to run the training notebook or supply
-a separate checkpoint.
+**V1 decision:** `python -m src.train final` saves a PyTorch checkpoint, which
+is committed as `models/checkpoint.pt`. The application Docker image bundles
+this checkpoint, the Python source, and runtime dependencies. Users do not need
+to run training or supply a separate checkpoint.
 
-The checkpoint contains:
+The checkpoint is a dictionary with CPU tensors:
 
-- Trained model weights (`model_state_dict`).
-- Preprocessing configuration, including the fixed training mean and standard deviation.
-- Architecture identifier, training configuration, seeds, and validation metrics.
-- Optimizer state and completed epoch count to support resuming training.
+- `architecture`: identifier checked against `src/nn_model.py` before loading.
+- `model_state_dict`: trained weights.
+- `preprocessing`: input contract and the fixed training mean and standard
+  deviation; `padding_per_side` is checked against `src/preprocessing.py`.
+- `training`: optimizer, hyperparameters, epochs, seed, sample count, and
+  per-epoch training loss of this model.
+- `selection`: the search run (path and SHA-256) that chose the
+  hyperparameters, the rule, and the winning candidate's validation metrics.
+  These describe the candidate trained on the 48,000-image split, not this model.
+- `provenance`: git commit and dirty flag, config and `uv.lock` hashes, PyTorch
+  version, and training device.
+
+Optimizer state is not saved: training takes under a minute, so a model is
+retrained rather than resumed.
 
 The model architecture is defined in `src/nn_model.py`; the checkpoint stores
 its identifier and weights, not an executable architecture. Image validation
@@ -319,10 +412,8 @@ Mounted image → CLI → preprocessing → PyTorch model → prediction → exi
 ```
 
 **Why a checkpoint for V1:** it fits the existing Python/PyTorch training and
-local inference workflow, and can support training resumption without an
-additional model export step. The saved optimizer state and epoch count help
-with resumption; exact continuation also requires restoring random-number and
-data-order state, which the current checkpoint does not fully capture.
+inference code without an additional export step, and `torch.load` with
+`weights_only=True` loads only tensors and plain data, not arbitrary code.
 
 **Future option:** ONNX can provide model interoperability across frameworks
 and inference runtimes. It requires an export step and verification that the

@@ -36,6 +36,14 @@ jobs:
       - name: Type check
         run: uv run --locked pyrefly check
 
+      # A checkout holds exactly one report: the one the README cites.
+      - name: Bundled checkpoint matches its evaluation report
+        run: |
+          reports=(results/*/summary.json)
+          test "${#reports[@]}" -eq 1
+          expected=$(jq -r .checkpoint.sha256 "${reports[0]}")
+          echo "$expected  models/checkpoint.pt" | sha256sum -c
+
   docker:
     runs-on: ubuntu-latest
     steps:

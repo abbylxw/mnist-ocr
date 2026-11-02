@@ -28,9 +28,10 @@ uv run --locked pyrefly check
 uv run --locked python -m src.cli tests/test_images/1_label_2.png --label 2
 ```
 
-The default trained artifact is `models/checkpoint.pt`. Run notebooks with
-`notebooks/` as their working directory; their checkpoint path is
-`../models/checkpoint.pt`. The training notebook creates `models/` before saving.
+The default trained artifact is `models/checkpoint.pt`, produced by
+`python -m src.train` (see Training). Run notebooks with `notebooks/` as their
+working directory. They are for exploration: the training notebook saves its
+own checkpoint to `runs/notebook/` (ignored), never over the shipped one.
 Tests create temporary checkpoints and do not require the trained artifact;
 one contract test also checks `models/checkpoint.pt` when it is present.
 
@@ -57,25 +58,53 @@ recorded as `git_dirty: true`; such checkpoints must not be released. `final`
 also refuses a search run made with a different config, and never overwrites
 an existing checkpoint. `--device` defaults to CUDA, then MPS, then CPU.
 
+## Evaluation
+
+```bash
+uv run --locked python -m src.evaluate                # models/checkpoint.pt
+uv run --locked python -m src.evaluate --checkpoint PATH
+```
+
+This exports the 10,000 MNIST test images to `data/test/` as PNG and
+quality-75 JPEG, decodes each file as the CLI does, and predicts on CPU through
+`MnistInference`, the code path the Docker image ships. It writes
+`results/<id>/summary.json` (accuracy, cross-entropy, Brier score, PNG→JPEG
+transitions, per-class accuracy, confusion matrices, checkpoint hash and
+provenance) and `per_image_results.csv`. It takes about 10 seconds.
+
+PNG pixels are checked against MNIST. JPEG bytes depend on the Pillow/libjpeg
+version, so the script refuses to run if they differ from
+`manifests/test_jpeg.sha256`: the results would no longer describe the
+recorded inputs. To check exported JPEGs by hand:
+
+```bash
+shasum -a 256 -c --quiet manifests/test_jpeg.sha256
+```
+
+Like training, evaluation refuses uncommitted changes, and also refuses a
+checkpoint whose provenance is dirty or missing; `--allow-dirty` overrides
+both for experiments. Evaluate a model once its training is final: the test
+set is not used to choose between models.
+
+## Releasing a model
+
+1. Train: `search`, then `final --out` to a path outside the repository.
+2. Copy the checkpoint to `models/checkpoint.pt`, commit, and evaluate it
+   from that clean commit.
+3. Commit the report, un-ignore its `results/<id>/` and the cited `runs/<id>/`
+   in `.gitignore` (dropping the previous ones), and update the README model
+   card and checkpoint hash.
+4. Merge the PR only with green CI.
+
 ## Artifacts kept in the repository
 
 | Kept | Generated, not committed |
 |---|---|
 | `models/checkpoint.pt` (bundled by the Dockerfile) | Docker image (build it from `Dockerfile`) |
 | `tests/test_images/1_label_2.png` (documentation example) | `data/` (MNIST download and exported test images) |
-| `results/20261019T042353529283Z/` (report cited in the README) | other `results/` runs, `*.pth` scratch weights |
+| the `results/<id>/` report cited in the README | other `results/` reports, `*.pth` scratch weights |
+| the `runs/<id>/` search run the checkpoint cites | other `runs/` |
 | `manifests/test_jpeg.sha256` (exported JPEG checksums) | |
-
-`notebooks/inference.ipynb` exports `data/test/`. PNG pixels are checked
-against MNIST during evaluation. JPEG bytes depend on the Pillow/libjpeg
-version, so after exporting, confirm they match the evaluated inputs:
-
-```bash
-shasum -a 256 -c --quiet manifests/test_jpeg.sha256
-```
-
-No output means every JPEG matches. A mismatch means the recorded results no
-longer describe these inputs.
 
 To select a checkpoint explicitly:
 

@@ -2,6 +2,7 @@
 name = "mnist-ocr"
 version = "1.0.0"
 description = "Hands-on MNIST digit recognition project"
+license = "MIT"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "torch==2.14.0",

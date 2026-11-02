@@ -52,12 +52,14 @@ and honest documentation of what the model can and cannot do.
 - [x] **P5. Model card** (PR #5): README section covering use, inputs, data,
   selection, metrics, per-class accuracy, limitations, test-set use, and
   reproduce commands. README section 8 describes the new checkpoint layout.
-- [ ] **P6. Release v1.0.0.** A CD workflow triggered by a `v*` tag builds the
-  image in CI and pushes it to GHCR as `ghcr.io/abbylxw/mnist-ocr:1.0.0`, with
-  the git commit and checkpoint SHA-256 as image labels. Document the rule:
-  one git tag = one image tag = one checkpoint hash.
+- [x] **P6. Release v1.0.0** (PR #6). `.github/workflows/release.yml` on
+  `v*` tags: tag on `main`, tag = `pyproject.toml` version, checkpoint matches
+  the report and is clean, example prediction passes, image tag unused; then
+  pushes `ghcr.io/abbylxw/mnist-ocr:1.0.0` with commit and checkpoint labels.
+  Release steps in `DEVELOPMENT.md`.
 
-Resume here: **P6** (release workflow and v1.0.0 tag).
+All planned items are done. Any further work (a new model, a new input
+scope) follows the release steps in `DEVELOPMENT.md` with a new version.
 
 ## Done
 
